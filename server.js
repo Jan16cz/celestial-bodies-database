@@ -1,49 +1,51 @@
-import express from "express";
-import cors from "cors";
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import { authenticate } from './middleware/authenticate.js';
+import { authorizeModification } from './middleware/authorize.js';
+import { getUsers, getWatchlist, addMovie, updateMovie, removeMovie } from './utils/db.js';
 
 const app = express();
+app.use(express.json());
 
-app.use(cors({ optionsSuccessStatus: 200 }));
+const SECRET = process.env.JWT_SECRET || 'secret';
 
-app.use(express.static("public"));
-
-app.get("/", (_req, res) => {
-  res.sendFile(import.meta.dirname + "/views/index.html");
-});
-
-// Do not change code above this line
-
-app.get("/api/:date", (req, res) => {
-  let dateParam = req.params.date;
-  let date;
-
-  if (!isNaN(dateParam)) {
-    date = new Date(parseInt(dateParam));
-  } else {
-    date = new Date(dateParam);
+app.post('/api/auth/login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: "Username and password required" });
   }
 
-  if (date.toString() === "Invalid Date") {
-    return res.json({ error: "Invalid Date" });
+  const users = getUsers();
+  const user = users.find(u => u.username === username);
+  if (!user || user.password !== password) {
+    return res.status(401).json({ error: "Invalid credentials" });
   }
 
-  res.json({
-    unix: date.getTime(),
-    utc: date.toUTCString()
-  });
+  const token = jwt.sign({ id: user.id, role: user.role, username: user.username }, SECRET, { expiresIn: '1h' });
+  res.json({ token });
 });
 
-app.get("/api", (req, res) => {
-  const date = new Date();
-  res.json({
-    unix: date.getTime(),
-    utc: date.toUTCString()
-  });
+app.get('/api/watchlist/:userId', authenticate, (req, res) => {
+  const watchlist = getWatchlist(req.params.userId);
+  res.json(watchlist);
 });
 
-// Do not change code below this line
+app.post('/api/watchlist/:userId/movies', authenticate, authorizeModification, (req, res) => {
+  const updated = addMovie(req.params.userId, req.body);
+  res.status(201).json(updated);
+});
 
-const PORT = 8000;
-const listener = app.listen(PORT, function () {
-  console.log("Your app is listening on port " + listener.address().port);
+app.put('/api/watchlist/:userId/movies/:movieId', authenticate, authorizeModification, (req, res) => {
+  const updated = updateMovie(req.params.userId, req.params.movieId, req.body);
+  res.status(200).json(updated);
+});
+
+app.delete('/api/watchlist/:userId/movies/:movieId', authenticate, authorizeModification, (req, res) => {
+  const updated = removeMovie(req.params.userId, req.params.movieId);
+  res.status(200).json(updated);
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
