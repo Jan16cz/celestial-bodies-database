@@ -1,17 +1,14 @@
 {
-  "name": "prime-checker-module",
+  "name": "build-a-personal-profile-app",
   "version": "1.0.0",
-  "description": "A module to check for prime numbers",
+  "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [
-    "prime",
-    "math"
-  ],
-  "author": "User",
-  "license": "MIT",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "type": "commonjs",
   "dependencies": {
     "express": "^5.3.0"
